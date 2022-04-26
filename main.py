@@ -40,14 +40,14 @@ def MillerRabin(n, certainty=15):
         #
         #   Note que: a^(d * 2^r') ≡ -1 (mod n) == a^(d * 2^r') ≡ (n-1) (mod n)
 
-        x = (a**d) % n
+        x = pow(a, d, n)      # x = a^d (mod n)
         if x == 1 or x == n1: # Primeira condição e Segunda condição quando r' = 0
             continue
 
         flag = False # Booleano para decidir se passa para a próxima iteração
 
         for _ in range(r-1): # Itera r' por 1 até r-1
-            x = (x**2) % n  # x = a^(d * 2^r')
+            x = pow(x, 2, n) # x = a^(d * 2^r')
 
             if x == n1: # Segunda condição para quando r' > 0 e r' < r
                 flag = True # Indica que o loop passa para a próxima iteração
