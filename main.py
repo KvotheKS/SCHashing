@@ -1,4 +1,3 @@
-import numpy as np
 import random
 import math
 
@@ -80,5 +79,40 @@ def genPrime(choice = -1, size=1024):
             break
     return prime
 
-def main():
-    return
+#retorna Pk,Sk
+def RSAKeys():
+    #gera primos P e Q, tal que P != Q
+    p = genPrime()
+    q = genPrime(p)
+    # computar n e phi(n) 
+    n,phin = p*q,(p-1)*(q-1)
+    
+    # computar "e" tal que ele nao tem divisores em comum com phi(n)
+    e = 3
+    while math.gcd(e,phin) > 1:
+        e += 2
+    
+    # inverso multiplicativo modular de "e"
+    d = pow(e,-1,phin)
+    return (e,n), (d,n)
+
+def RSACypher(message, pk):
+    # transforma a string unicode em um array de bits utf-8
+    out = int.from_bytes(message.encode('latin1'), byteorder='big')
+    out = int(pow(out, pk[0], pk[1]))
+    out = out.to_bytes(max(1,math.ceil(out.bit_length()/8)), byteorder='big')
+    return out.decode('latin1')
+
+def RSADecypher(cypher, sk):
+    out = int.from_bytes(cypher.encode('latin1'), byteorder='big')
+    out = int(pow(out, sk[0], sk[1]))
+    out = out.to_bytes(max(1,math.ceil(out.bit_length()/8)), byteorder='big')
+    return out.decode('latin1')
+
+def RSA(message):
+    pk, sk = RSAKeys()
+    cipher = RSACypher(message,pk)
+    print(cipher)
+    print(RSADecypher(cipher, sk))
+
+RSA('Testes Bons Belos Bonitos :^)')
