@@ -57,16 +57,13 @@ def genPrime(choice = -1, size=1024):
 def RSAKeys():
     #gera primos P e Q, tal que P != Q
     p = genPrime()
-    print("aleluia")
     q = genPrime(p)
-    print("amem")
     # computar n e phi(n) 
     n,phin = p*q,(p-1)*(q-1)
     
     # computar "e" tal que ele nao tem divisores em comum com phi(n)
     e = 3
     while math.gcd(e,phin) > 1:
-        print("gcd")
         e += 2
     
     # inverso multiplicativo modular de "e"
@@ -92,4 +89,4 @@ def RSA(message):
     print(cipher)
     print(RSADecypher(cipher, sk))
 
-RSA('JUBILEU')
+RSA('Testes Bons Belos Bonitos :^)')
