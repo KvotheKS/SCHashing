@@ -98,16 +98,16 @@ def RSAKeys():
 
 def RSACypher(message, pk):
     # transforma a string unicode em um array de bits utf-8
-    out = int.from_bytes(message.encode('iso8859_16'), byteorder='big')
+    out = int.from_bytes(message.encode('latin1'), byteorder='big')
     out = int(pow(out, pk[0], pk[1]))
     out = out.to_bytes(max(1,math.ceil(out.bit_length()/8)), byteorder='big')
-    return out.decode('iso8859_16')
+    return out.decode('latin1')
 
 def RSADecypher(cypher, sk):
-    out = int.from_bytes(cypher.encode('iso8859_16'), byteorder='big')
+    out = int.from_bytes(cypher.encode('latin1'), byteorder='big')
     out = int(pow(out, sk[0], sk[1]))
     out = out.to_bytes(max(1,math.ceil(out.bit_length()/8)), byteorder='big')
-    return out.decode('iso8859_16')
+    return out.decode('latin1')
 
 def RSA(message):
     pk, sk = RSAKeys()
@@ -115,4 +115,4 @@ def RSA(message):
     print(cipher)
     print(RSADecypher(cipher, sk))
 
-RSA('Testes Bons Belos Bonitos :^)')
+RSA('Téâãstes Bons Belos Bonitos :^)')
