@@ -180,7 +180,7 @@ def OAEPDecypher(EM, label="", k = 256):
     
     if i == len(dbits) or lHash != lHashl:
         print("Decryption error OEAP")
-        return
+        return ''
     
     message = dbits[i+1:]
     
