@@ -1,6 +1,7 @@
 import random
 import math
 import hashlib
+import secrets 
 from base64 import b64encode, b64decode
 
 def MillerRabin(n, certainty=15):
@@ -81,8 +82,14 @@ def genPrime(choice = -1, size=1024):
             break
     return prime
 
-#retorna Pk,Sk
 def RSAKeys():
+    """
+        _ -> (e,n), (d,n)
+
+        Computamos tanto PK quanto SK, seguindo o teste de primalidade MillerRabin.
+        Os valores de P e Q são de 1024 bits cada, ou seja, o tamanho do modulo n
+        é de 2048!
+    """
     #gera primos P e Q, tal que P != Q
     p = genPrime()
     q = genPrime(p)
@@ -99,71 +106,125 @@ def RSAKeys():
     return (e,n), (d,n)
 
 def RSACypher(message, pk):
+    """
+        bytes, (e,n) -> bytes
+    """
     # transforma a string unicode em um array de bits utf-8
-    out = int.from_bytes(message.encode('latin1'), byteorder='big')
+    out = int.from_bytes(message, byteorder='big')
     out = int(pow(out, pk[0], pk[1]))
     out = out.to_bytes(max(1,math.ceil(out.bit_length()/8)), byteorder='big')
-    return out.decode('latin1')
+    return out
 
 def RSADecypher(cypher, sk):
-    out = int.from_bytes(cypher.encode('latin1'), byteorder='big')
+    """
+        bytes, (d,n) -> bytes
+    """
+    out = int.from_bytes(cypher, byteorder='big')
     out = int(pow(out, sk[0], sk[1]))
     out = out.to_bytes(max(1,math.ceil(out.bit_length()/8)), byteorder='big')
-    return out.decode('latin1')
+    return out
 
 
-def RSA(message):
-    pk, sk = RSAKeys()
-    cipher = RSACypher(message,pk)
-    print(cipher)
-    print(RSADecypher(cipher, sk))
+# def RSA(message):
+#     pk, sk = RSAKeys()
+#     cipher = RSACypher(message,pk)
+#     print(cipher)
+#     print(RSADecypher(cipher, sk))
 
-def OAEP(message):
-    X,Y = OAEPCypher(message)
-    OAEPout = OAEPDecypher(X,Y)
-
-    print(X,Y)
-    print(OAEPout)
-"""
-    Tanto a i2osp quanto a mgf1 retorna um objeto da classe bytes.
-"""
 def i2osp(integer, size = 4):
+    """
+        int, size -> bytes 
+
+        Segue os padrões do RFC. É utilizado tanto no mgf1 quanto no processo
+        de cifração e decifração do RSA.
+        Vale notar que o tamanho do objeto bytes vai ser igual ao size.
+    """
     return b"".join([chr((integer >> (8 * i)) & 0xFF).encode() for i in reversed(range(size))])
 
-def mgf1(input_str, length):
-    """Mask generation function."""
+def os2ip(X):
+    """
+        bytes -> int
+
+        Versão inversa do i2osp, é utilizada apenas na RSA.
+    """
+    X.reverse()
+    x = 0
+    for i in range(len(X)):
+        x += X[i] * 256 ^ i
+    return x
+
+def mgf1(input_str, size):
+    """
+        bytes, size -> bytes
+
+        Função de de geração de máscara do padrão PKCS#1.
+    """
     counter = 0
     output = b""
-    while len(output) < length:
+    while len(output) < size:
         C = i2osp(counter, 4)
         output += hashlib.sha3_256(input_str + C).digest()
         counter += 1
-    return output[:length]
+    return output[:size]
 
-# tuple, bytes, str -> bytes
+# 
 def OAEPCypher(message, label="", k = 256):
-    lHash = hashlib.sha3_256(label.encode('latin1')).digest()
+    """
+        bytes, str(optional), int(optional) -> bytes
 
-    padding = ('0'*(k-len(message)-2*len(lHash)-2)).encode('latin1')
+        Cifra OAEP. Recebe uma mensagem bytes e retorna um
+        novo bloco, que é maior que a mensagem original.
+    """
+
+    #Hash da label
+    lHash = hashlib.sha3_256(label.encode()).digest()
+
+    #criação do padding de tamanho k - mLen -2hLen - 2 e transforma em bytes.
+    padding = ('0'*(k-len(message)-2*len(lHash)-2)).encode()
     
+    #criação do db, um bloco que contém a label, padding, identificador 0x01 e a mensagem
     db = lHash + padding + int(0x01).to_bytes(1,byteorder='big') + message
-    
-    r = int(random.getrandbits(len(lHash)*8)).to_bytes(len(lHash), byteorder='big')
-    
-    dbmask = mgf1(r, k-len(lHash)-1)
 
+    #criação de uma 'seed', que é uma string randomica de tamanho hLen
+    #é a parte que transforma o RSA em um algoritmo seguro.    
+    seed = int(random.getrandbits(len(lHash)*8)).to_bytes(len(lHash), byteorder='big')
+    
+    #Máscara gerada para realizar o xor com o db.
+    dbmask = mgf1(seed, k-len(lHash)-1)
+
+    #máscara de DB com DBmask
     maskedb = int.from_bytes(db,byteorder='big') ^ int.from_bytes(dbmask, byteorder='big')
     maskedbits = maskedb.to_bytes(k-len(lHash)-1, byteorder='big')
+
+    #Tendo mascarado o db original, precisamos passar por outro processo para fazer uma nova máscara.
+    #Desta vez é com a seed.
     seedMask = mgf1(maskedbits, len(lHash))
-    maskedseed = (int.from_bytes(r, byteorder='big') ^ int.from_bytes(seedMask, byteorder='big')).to_bytes(len(lHash), byteorder='big')
+
+    maskedseed = (int.from_bytes(seed, byteorder='big') ^ int.from_bytes(seedMask, byteorder='big')).to_bytes(len(lHash), byteorder='big')
+
+    #Por fim, juntamos os dois blocos mascarados com um identificador inicial 0x00.
     return int(0x00).to_bytes(1, byteorder='big') + maskedseed + maskedbits
 
-# bytes, str -> bytes
 def OAEPDecypher(EM, label="", k = 256):
-    lHash = hashlib.sha3_256(label.encode('latin1')).digest()
+    """
+        bytes, str(optional), int(optional) -> bytes
+
+        Decifração do OAEP. Desta vez recebe o bloco cifrado EM.
+        Não só desfaz o processo de cifra do OAEP, como também
+        checa se a mensagem não foi maculada.
+    """
+    #Hash da label
+    lHash = hashlib.sha3_256(label.encode()).digest()
+
+    #Começamos separando os dois blocos que importam do EM, maskedSeed e maskeDB.
     maskedseed = EM[1:len(lHash)+1]
+
     maskedb = EM[len(lHash) + 1:]
+
+    #Após a recuperação da maskedseed, é 'trivial' recuperar a seedMask
     seedMask = mgf1(maskedb , len(lHash))
+
+    #E igualmente a seed original, dado que estamos literalmente fazendo o processo inverso da cifra.
     seed = int.from_bytes(maskedseed, byteorder='big') ^ int.from_bytes(seedMask, byteorder='big')
     seedbits = seed.to_bytes(max(1,math.ceil(seed.bit_length()/8)), byteorder='big')
 
@@ -172,21 +233,30 @@ def OAEPDecypher(EM, label="", k = 256):
     db = int.from_bytes(maskedb, byteorder='big') ^ int.from_bytes(dbmask, byteorder='big')
     dbits = db.to_bytes(max(1,math.ceil(db.bit_length()/8)), byteorder='big')
 
+    #Hash da label que recuperamos de db. 
     lHashl = dbits[:len(lHash)]
 
+    #processo de reconhecer quando o padding acaba.
     i = len(lHash)
     while(i < len(dbits) and dbits[i] == 48):
         i+=1
     
+    """
+        é aqui que a decifração se torna diferente da cifração.
+        checamos se ou o bit de identificação 0x01 foi perdido ou
+        se os hashs das labels são diferentes. Caso sejam, printa
+        erro e retorna uma string vazia.
+    """
     if i == len(dbits) or lHash != lHashl:
         print("Decryption error OEAP")
-        return
+        return ''
     
+    #finalmente conseguimos recuperar a mensagem original.
     message = dbits[i+1:]
     
     return message
 
-l = OAEPCypher('Téâãstes Bons Belos Bonitos :^)'.encode('latin1'))
+l = OAEPCypher('Téâãstes Bons Belos Bonitos :^)'.encode())
 #print(l)
-r = OAEPDecypher(l).decode('latin1')
+r = OAEPDecypher(l).decode()
 print(r)
