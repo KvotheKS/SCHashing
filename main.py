@@ -6,7 +6,8 @@ from base64 import b64encode, b64decode
 
 def MillerRabin(n, certainty=15):
     """
-        A função recebe 2 parâmetros:
+        Função que determina se um número é provalvemente primo ou não é primo
+        Recebe 2 parâmetros:
             n -> número que queremos testar a primalidade
             certainty -> grau de certeza do teste de primalidade. Quanto maior certainty, maior 
             a precisão do teste tal que a chance de um falso positivo seja de 4^(-certainty)
@@ -64,7 +65,8 @@ def MillerRabin(n, certainty=15):
 
 def genPrime(choice = -1, size=1024):
     """
-        A função recebe 2 parâmetros opcionais:
+        Função que gera um número primo com size bytes que seja diferente de choice
+        Recebe 2 parâmetros opcionais:
             choice -> Número primo que eu não quero pegar
             size -> Tamanho em bits do número primo que quero gerar
         Retorno:
