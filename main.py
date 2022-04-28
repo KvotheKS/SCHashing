@@ -42,8 +42,7 @@ def DecypherProtocol(HashCypher, CypherText, CypherSession,pk, sk, nonce):
     
     #Recuperamos o Hash da mensagem utilizando RSA.
     mHash = RSA.to_bytes(RSA.RSADecypher(int.from_bytes(HashCypher, byteorder='big'), pk))
-    
-    print(CypherText, sessionK)
+
     #Recuperamos a mensagem usando AES.
     message = AES.decryptCTR(CypherText, sessionK, nonce)
 
@@ -52,11 +51,11 @@ def DecypherProtocol(HashCypher, CypherText, CypherSession,pk, sk, nonce):
 
     #Comparação do Hash recebido com o Hash inicial da mensagem.
     if rmHash == mHash:
-        print("Yay deu certo :)")
+        print("Arquivo verificado! O cálculo do hash da mensagem recuperada é igual ao hash enviado.")
+        return message.decode()
     else:
-        print("NOOOOOOOOOOOOOO")
-
-    return message.decode()
+        print("ERRO! O cálculo do hash da mensagem recuperada não condiz com o hash enviado!!!")
+        return None
 
 def FullProtocol(message):
     
@@ -68,11 +67,13 @@ def FullProtocol(message):
 
     #Resultado da cifração por parte do transmissor.
     HashCypher, CypherText, CypherSession = CypherProtocol(message, pk, sk, nonce)
+    print(CypherText)
 
     #Resultado da decifração por parte do receptor.
     receptor = DecypherProtocol(HashCypher, CypherText, 
                                 CypherSession, pk, sk, nonce)
 
+    print("Messagem recebida:")
     print(receptor)
 
-FullProtocol('kappa')
+FullProtocol('Os amigos do maestro querem que dificilmente se possa acha obra tão bem acabada. Um ou outro admite certas rudezas e tais ou quais lacunas, mas com o andar da ópera é provável que estas sejam preenchidas ou explicadas, e aquelas desapareçam inteiramente, não se negando o maestro a emendar a obra onde achar que não responde de todo ao pensamento sublime do poeta. Já não dizem o mesmo os amigos deste. Juram que o libreto foi sacrificado, que a partitura corrompeu o sentido da letra, e, posto seja bonita em alguns lugares, e trabalhada com arte em outros, é absolutamente diversa e até contrária ao drama. O grotesco, por exemplo, não está no texto do poeta; é uma excrescência para imitar as Mulheres Patuscas de Windsor. Este ponto é contestado pelos satanistas com alguma aparência de razão. Dizem eles que, ao tempo em que o jovem Satanás compôs a grande ópera, nem essa farsa nem Shakespeare eram nascidos. Chegam a afirmar que o poeta inglês não teve outro gênio senão transcrever a letra da ópera, com tal arte e fidelidade, que parece ele próprio o autor da composição; mas, evidentemente, é um plagiário.')

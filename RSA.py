@@ -2,9 +2,11 @@ import random
 import math
 import hashlib
 import secrets 
-from base64 import b64encode, b64decode
 
 def to_bytes(integer):
+    """
+        Função que converte um inteiro para uma string de bytes
+    """
     return integer.to_bytes(max(1, math.ceil(integer.bit_length()/8)) ,byteorder='big')
 
 def MillerRabin(n, certainty=15):
@@ -80,7 +82,7 @@ def genPrime(choice = -1, size=1024):
     # Roda até achar um primo de size bits
     while(True):
         # Gera um número randômico de size bits
-        prime = random.getrandbits(size)
+        prime = secrets.randbits(size)
 
         # Verifica se esse número é provalvemente um primo e diferente de choice
         if MillerRabin(prime) and prime != choice:
@@ -90,6 +92,7 @@ def genPrime(choice = -1, size=1024):
 def RSAKeys():
     """
         _ -> (e,n), (d,n)
+
         Computamos tanto PK quanto SK, seguindo o teste de primalidade MillerRabin.
         Os valores de P e Q são de 1024 bits cada, ou seja, o tamanho do modulo n
         é de 2048!
@@ -112,18 +115,27 @@ def RSAKeys():
 def RSACypher(message, pk):
     """
         integer, (e,n) -> integer
+
+        Cifrador da RSA. Não deve ser utilizada caso o objetivo
+        seja de ser seguro contra ataques. Para essa finalidade,
+        temos a RSAOEAPCypher.
     """
     return int(pow(message, pk[0], pk[1]))
 
 def RSADecypher(cypher, sk):
     """
         integer, (d,n) -> integer
+
+        Decifrador da RSA. Não deve ser utilizada caso o objetivo
+        seja de ser seguro contra ataques. Para essa finalidade,
+        temos a RSAOEAPDecypher.
     """
     return int(pow(cypher, sk[0], sk[1]))
 
 def mgf1(input_str, size):
     """
         bytes, size -> bytes
+
         Função de de geração de máscara do padrão PKCS#1.
     """
     counter = int(0)
@@ -138,6 +150,7 @@ def mgf1(input_str, size):
 def OAEPCypher(message, label="", k = 256):
     """
         bytes, str(optional), int(optional) -> bytes
+
         Cifra OAEP. Recebe uma mensagem bytes e retorna um
         novo bloco, que é maior que a mensagem original.
     """
@@ -153,7 +166,7 @@ def OAEPCypher(message, label="", k = 256):
 
     #criação de uma 'seed', que é uma string randomica de tamanho hLen
     #é a parte que transforma o RSA em um algoritmo seguro.    
-    seed = to_bytes(int(random.getrandbits(len(lHash)*8)))
+    seed = to_bytes(int(secrets.randbits(len(lHash)*8)))
     
     #Máscara gerada para realizar o xor com o db.
     dbmask = mgf1(seed, k-len(lHash)-1)
@@ -174,6 +187,7 @@ def OAEPCypher(message, label="", k = 256):
 def OAEPDecypher(EM, label="", k = 256):
     """
         bytes, str(optional), int(optional) -> bytes
+
         Decifração do OAEP. Desta vez recebe o bloco cifrado EM.
         Não só desfaz o processo de cifra do OAEP, como também
         checa se a mensagem não foi maculada.
@@ -210,11 +224,11 @@ def OAEPDecypher(EM, label="", k = 256):
         é aqui que a decifração se torna diferente da cifração.
         checamos se ou o bit de identificação 0x01 foi perdido ou
         se os hashs das labels são diferentes. Caso sejam, printa
-        erro e retorna uma string vazia.
+        erro e retorna None.
     """
     if i == len(dbits) or lHash != lHashl:
         print("Decryption error OAEP")
-        return ''
+        return None
     
     #finalmente conseguimos recuperar a mensagem original.
     message = dbits[i+1:]
@@ -224,6 +238,7 @@ def OAEPDecypher(EM, label="", k = 256):
 def RSAOAEPCypher(message, pk, label='', k=256):
     """
         bytes, (e,n), label(optional) -> bytes
+
         Cifração RSAOAEP.
         Função que serve para apenas juntar o funcionamento do 
         OAEP com o do RSA, com objetivo de modularizar o código
@@ -236,6 +251,7 @@ def RSAOAEPCypher(message, pk, label='', k=256):
 def RSAOAEPDecypher(cypher, sk, label='', k=256):
     """
         bytes, (e,n), label(optional) -> bytes
+
         Decifração RSAOAEP.
         Função que serve para apenas juntar o funcionamento do 
         OAEP com o do RSA, com objetivo de modularizar o código
