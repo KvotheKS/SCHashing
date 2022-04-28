@@ -107,51 +107,15 @@ def RSAKeys():
 
 def RSACypher(message, pk):
     """
-        bytes, (e,n) -> bytes
+        integer, (e,n) -> integer
     """
-    # transforma a string unicode em um array de bits utf-8
-    out = int.from_bytes(message, byteorder='big')
-    out = int(pow(out, pk[0], pk[1]))
-    out = out.to_bytes(max(1,math.ceil(out.bit_length()/8)), byteorder='big')
-    return out
+    return int(pow(message, pk[0], pk[1]))
 
 def RSADecypher(cypher, sk):
     """
-        bytes, (d,n) -> bytes
+        integer, (d,n) -> integer
     """
-    out = int.from_bytes(cypher, byteorder='big')
-    out = int(pow(out, sk[0], sk[1]))
-    out = out.to_bytes(max(1,math.ceil(out.bit_length()/8)), byteorder='big')
-    return out
-
-
-# def RSA(message):
-#     pk, sk = RSAKeys()
-#     cipher = RSACypher(message,pk)
-#     print(cipher)
-#     print(RSADecypher(cipher, sk))
-
-def i2osp(integer, size = 4):
-    """
-        int, size -> bytes 
-
-        Segue os padrões do RFC. É utilizado tanto no mgf1 quanto no processo
-        de cifração e decifração do RSA.
-        Vale notar que o tamanho do objeto bytes vai ser igual ao size.
-    """
-    return b"".join([chr((integer >> (8 * i)) & 0xFF).encode() for i in reversed(range(size))])
-
-def os2ip(X):
-    """
-        bytes -> int
-
-        Versão inversa do i2osp, é utilizada apenas na RSA.
-    """
-    X.reverse()
-    x = 0
-    for i in range(len(X)):
-        x += X[i] * 256 ^ i
-    return x
+    return int(pow(cypher, sk[0], sk[1]))
 
 def mgf1(input_str, size):
     """
@@ -159,10 +123,10 @@ def mgf1(input_str, size):
 
         Função de de geração de máscara do padrão PKCS#1.
     """
-    counter = 0
+    counter = int(0)
     output = b""
     while len(output) < size:
-        C = i2osp(counter, 4)
+        C = counter.to_bytes(4, byteorder='big')
         output += hashlib.sha3_256(input_str + C).digest()
         counter += 1
     return output[:size]
@@ -248,7 +212,7 @@ def OAEPDecypher(EM, label="", k = 256):
         erro e retorna uma string vazia.
     """
     if i == len(dbits) or lHash != lHashl:
-        print("Decryption error OEAP")
+        print("Decryption error OAEP")
         return ''
     
     #finalmente conseguimos recuperar a mensagem original.
@@ -256,7 +220,45 @@ def OAEPDecypher(EM, label="", k = 256):
     
     return message
 
-l = OAEPCypher('Téâãstes Bons Belos Bonitos :^)'.encode())
-#print(l)
-r = OAEPDecypher(l).decode()
-print(r)
+def RSAOAEPCypher(message, pk, label='', k=256):
+    """
+        bytes, (e,n), label(optional) -> bytes
+
+        Cifração RSAOAEP.
+        Função que serve para apenas juntar o funcionamento do 
+        OAEP com o do RSA, com objetivo de modularizar o código
+    """
+    EM = OAEPCypher(message, label)
+    M = int.from_bytes(EM,byteorder='big')
+    c = RSACypher(M, pk)
+    return c.to_bytes(k, byteorder='big')
+
+def RSAOAEPDecypher(cypher, sk, label='', k=256):
+    """
+        bytes, (e,n), label(optional) -> bytes
+
+        Decifração RSAOAEP.
+        Função que serve para apenas juntar o funcionamento do 
+        OAEP com o do RSA, com objetivo de modularizar o código
+    """
+    c = int.from_bytes(cypher, byteorder='big')
+    m = RSADecypher(c, sk)
+    return OAEPDecypher(m.to_bytes(k, byteorder='big'))
+
+def FullCypher():
+    pass
+
+def FullDecypher():
+    pass
+    
+def FullProtocol(message):
+    pk, sk = RSAKeys()
+    message = message.encode()
+    CypherText = RSAOAEPCypher(message, pk)
+
+    Message = RSAOAEPDecypher(CypherText, sk)
+    return Message.decode()
+
+l = FullProtocol('Téâãstes Bons Belos Bonitos :^)')
+#l = 'Téâãstes Bons Belos Bonitos :^)'.encode()
+print(l)
