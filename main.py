@@ -1,5 +1,7 @@
 import random
 import math
+import hashlib
+from base64 import b64encode, b64decode
 
 def MillerRabin(n, certainty=15):
     """
@@ -109,10 +111,82 @@ def RSADecypher(cypher, sk):
     out = out.to_bytes(max(1,math.ceil(out.bit_length()/8)), byteorder='big')
     return out.decode('latin1')
 
+
 def RSA(message):
     pk, sk = RSAKeys()
     cipher = RSACypher(message,pk)
     print(cipher)
     print(RSADecypher(cipher, sk))
 
-RSA('Téâãstes Bons Belos Bonitos :^)')
+def OAEP(message):
+    X,Y = OAEPCypher(message)
+    OAEPout = OAEPDecypher(X,Y)
+
+    print(X,Y)
+    print(OAEPout)
+"""
+    Tanto a i2osp quanto a mgf1 retorna um objeto da classe bytes.
+"""
+def i2osp(integer, size = 4):
+    return b"".join([chr((integer >> (8 * i)) & 0xFF).encode() for i in reversed(range(size))])
+
+def mgf1(input_str, length):
+    """Mask generation function."""
+    counter = 0
+    output = b""
+    while len(output) < length:
+        C = i2osp(counter, 4)
+        output += hashlib.sha3_256(input_str + C).digest()
+        counter += 1
+    return output[:length]
+
+# tuple, bytes, str -> bytes
+def OAEPCypher(message, label="", k = 256):
+    lHash = hashlib.sha3_256(label.encode('latin1')).digest()
+
+    padding = ('0'*(k-len(message)-2*len(lHash)-2)).encode('latin1')
+    
+    db = lHash + padding + int(0x01).to_bytes(1,byteorder='big') + message
+    
+    r = int(random.getrandbits(len(lHash)*8)).to_bytes(len(lHash), byteorder='big')
+    
+    dbmask = mgf1(r, k-len(lHash)-1)
+
+    maskedb = int.from_bytes(db,byteorder='big') ^ int.from_bytes(dbmask, byteorder='big')
+    maskedbits = maskedb.to_bytes(k-len(lHash)-1, byteorder='big')
+    seedMask = mgf1(maskedbits, len(lHash))
+    maskedseed = (int.from_bytes(r, byteorder='big') ^ int.from_bytes(seedMask, byteorder='big')).to_bytes(len(lHash), byteorder='big')
+    return int(0x00).to_bytes(1, byteorder='big') + maskedseed + maskedbits
+
+# bytes, str -> bytes
+def OAEPDecypher(EM, label="", k = 256):
+    lHash = hashlib.sha3_256(label.encode('latin1')).digest()
+    maskedseed = EM[1:len(lHash)+1]
+    maskedb = EM[len(lHash) + 1:]
+    seedMask = mgf1(maskedb , len(lHash))
+    seed = int.from_bytes(maskedseed, byteorder='big') ^ int.from_bytes(seedMask, byteorder='big')
+    seedbits = seed.to_bytes(max(1,math.ceil(seed.bit_length()/8)), byteorder='big')
+
+    dbmask = mgf1(seedbits, k - len(lHash) -1)
+
+    db = int.from_bytes(maskedb, byteorder='big') ^ int.from_bytes(dbmask, byteorder='big')
+    dbits = db.to_bytes(max(1,math.ceil(db.bit_length()/8)), byteorder='big')
+
+    lHashl = dbits[:len(lHash)]
+
+    i = len(lHash)
+    while(i < len(dbits) and dbits[i] == 48):
+        i+=1
+    
+    if i == len(dbits) or lHash != lHashl:
+        print("Decryption error OEAP")
+        return
+    
+    message = dbits[i+1:]
+    
+    return message
+
+l = OAEPCypher('Téâãstes Bons Belos Bonitos :^)'.encode('latin1'))
+#print(l)
+r = OAEPDecypher(l).decode('latin1')
+print(r)
