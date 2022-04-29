@@ -157,7 +157,7 @@ def OAEPCypher(message, label="", k = 256):
 
     # Hash da label
     lHash = hashlib.sha3_256(label.encode()).digest()
-
+    
     # Criação do padding de tamanho k - mLen -2hLen - 2 e transforma em bytes.
     padding = ('0'*(k-len(message)-2*len(lHash)-2)).encode()
     

@@ -4,6 +4,22 @@ import secrets
 import hashlib
 import base64
 
+def appendCypher(sessionK, mHash, CypherHash, CypherText, CypherSession):
+    hyphen = '------------'
+    nl = '\n\n\n'
+    lsInfo = [sessionK, mHash, CypherHash, CypherText, CypherSession]
+    lsNames= ["sessionK", "mHash", "CypherHash", "CypherText", "CypherSession"]
+    for i in range(len(lsInfo)):
+        cypherOut.write(hyphen + lsNames[i] + hyphen + nl + str(lsInfo[i]) + nl)
+
+def appendDecypher(sessionK, mHash, rmHash, message):
+    hyphen = '------------'
+    nl = '\n\n\n'
+    lsInfo = [sessionK, mHash, rmHash, message]
+    lsNames= ["sessionK", "mHash", "rmHash", "message"]
+    for i in range(len(lsInfo)):
+        decypherOut.write(hyphen + lsNames[i] + hyphen + nl + str(lsInfo[i]) + nl)
+
 def CypherProtocol(message, pk, sk, nonce):
     """
         str, (e,n), (d,n), bytes -> (bytes(base64), bytes(base64), bytes(base64))
@@ -30,15 +46,20 @@ def CypherProtocol(message, pk, sk, nonce):
 
     # Cifra do Hash da mensagem usando a chave privada do RSA.
     CypherHash = RSA.to_bytes( RSA.RSACypher( int.from_bytes(mHash, byteorder='big') , sk) )
- 
+    CypherHash = base64.b64encode(CypherHash)
     # Cifra da mensagem utilizando o AES.
     CypherText = AES.encryptCTR(message, sessionK, nonce)
-    
+    CypherText = base64.b64encode(CypherText)
+
     # Cifra da chave de sessão tanto com OAEP quanto com RSA.
     CypherSession = RSA.RSAOAEPCypher(sessionK, pk)
+    CypherSession = base64.b64encode(CypherSession)
 
-    # Formatação dos retornos para BASE64
-    return base64.b64encode(CypherHash), base64.b64encode(CypherText), base64.b64encode(CypherSession)
+    appendCypher(sessionK, mHash, CypherHash, CypherText, CypherSession)
+
+    # Vale notar que todos esses elementos tomaram encoding em Base64, 
+    # assim como requisitado 
+    return CypherHash, CypherText, CypherSession
 
 def DecypherProtocol(CypherHash, CypherText, CypherSession, pk, sk, nonce):
     """
@@ -72,7 +93,9 @@ def DecypherProtocol(CypherHash, CypherText, CypherSession, pk, sk, nonce):
 
     # Cálculo de Hash da mensagem recuperada
     rmHash = hashlib.sha3_256(message).digest()
-
+    
+    appendDecypher(sessionK, mHash, rmHash, message.decode())
+    
     # Comparação do Hash recebido com o Hash inicial da mensagem.
     if rmHash == mHash:
         print("Arquivo verificado! O cálculo do hash da mensagem recuperada é igual ao hash enviado.")
@@ -80,6 +103,8 @@ def DecypherProtocol(CypherHash, CypherText, CypherSession, pk, sk, nonce):
     else:
         print("ERRO! O cálculo do hash da mensagem recuperada não condiz com o hash enviado!!!")
         return None
+    
+    
 
 def FullProtocol(message):
     """
@@ -116,4 +141,10 @@ fileName = input()
 with open(fileName, "r", encoding='utf-8') as arquivo:
     message = arquivo.read()
 
+cypherOut = open('CypherOutput.txt', 'w', encoding='utf-8')
+decypherOut = open('DecypherOutput.txt', 'w', encoding='utf-8')
+
 FullProtocol(message)
+
+cypherOut.close()
+decypherOut.close()
