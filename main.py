@@ -3,53 +3,77 @@ import AES
 import secrets
 import hashlib
 import base64
-import math
 
 def CypherProtocol(message, pk, sk, nonce):
     """
         str, (e,n), (d,n), bytes -> (bytes(base64), bytes(base64), bytes(base64))
+
+        Função que simula o processo de cifração por parte do remetente da mensagem
+        Entrada:
+            message -> Mensagem a ser cifrada
+            pk -> Chave pública do RSA
+            sk -> Chave privada do RSA
+            nonce -> Valor do vetor inicial do AES
+        Saída:
+            Retorna o Hash da mensagem em claro cifrado usando RSA com a sk, a mensagem cifrada
+            utilizando AES no modo CTR com uma chave de sessão e a chave de sessão cifrada usando
+            RSAOAEP. Todos os três são codificados em BASE64
     """
-    #Transformando a mensagem inicial em bytes.
+    # Transformando a mensagem inicial em bytes.
     message = message.encode()
     
-    #geração da chave de sessão para o AES.
+    # Geração da chave de sessão para o AES.
     sessionK = secrets.token_bytes(16)
 
-    #Cálculo do hash da mensagem em claro.
+    # Cálculo do hash da mensagem em claro.
     mHash = hashlib.sha3_256(message).digest()
 
-    #Cifra do Hash da mensagem usando a chave privada do RSA.
-    HashCypher = RSA.to_bytes( RSA.RSACypher( int.from_bytes(mHash, byteorder='big') , sk) )
+    # Cifra do Hash da mensagem usando a chave privada do RSA.
+    CypherHash = RSA.to_bytes( RSA.RSACypher( int.from_bytes(mHash, byteorder='big') , sk) )
  
-    #Cifra da mensagem utilizando o AES.
+    # Cifra da mensagem utilizando o AES.
     CypherText = AES.encryptCTR(message, sessionK, nonce)
     
-    #Cifra da chave de sessão tanto com OAEP quanto com RSA.
+    # Cifra da chave de sessão tanto com OAEP quanto com RSA.
     CypherSession = RSA.RSAOAEPCypher(sessionK, pk)
 
-    #codificando tudo em base64
-    return (base64.b64encode(HashCypher), base64.b64encode(CypherText), 
-        base64.b64encode(CypherSession))
+    # Formatação dos retornos para BASE64
+    return base64.b64encode(CypherHash), base64.b64encode(CypherText), base64.b64encode(CypherSession)
 
-def DecypherProtocol(HashCypher, CypherText, CypherSession,pk, sk, nonce):
-    #Parsing da mensagem de base64 para bytes.
-    HashCypher = base64.b64decode(HashCypher)
+def DecypherProtocol(CypherHash, CypherText, CypherSession, pk, sk, nonce):
+    """
+        bytes(base64), bytes(base64), bytes(base64), (e,n), (d,n), bytes -> str || None
+
+        Função que simula o processo de decifração por parte do destinatário da mensagem
+        Entrada:
+            CypherHash -> Hash cifrado da mensagem em claro
+            CypherText -> A mensagem cifrada
+            CypherSession -> Chave de sessão cifrada
+            pk -> Chave pública do RSA
+            sk -> Chave privada do RSA
+            nonce -> Valor do vetor inicial do AES
+        Saída:
+            Retorna a mensagem decifrada caso o cálculo do Hash da mensagem decifrada seja igual
+            ao Hash da mensagem em claro que foi enviado. Caso contrário, retorna None
+    """
+    # Parsing da mensagem de BASE64 para Bytes.
+    CypherHash = base64.b64decode(CypherHash)
     CypherText = base64.b64decode(CypherText)
     CypherSession = base64.b64decode(CypherSession)
 
-    #Decifrando a chave de sessão do AES.
+    # Decifrando a chave de sessão do AES.
     sessionK = RSA.RSAOAEPDecypher(CypherSession, sk)
     
-    #Recuperamos o Hash da mensagem utilizando RSA.
-    mHash = RSA.to_bytes(RSA.RSADecypher(int.from_bytes(HashCypher, byteorder='big'), pk))
+    # Recuperamos o Hash da mensagem utilizando RSA.
+    mHash = RSA.to_bytes(RSA.RSADecypher(int.from_bytes(CypherHash, byteorder='big'), pk))
 
-    #Recuperamos a mensagem usando AES.
+    # Recuperamos a mensagem usando o AES no modo CTR.
     message = AES.decryptCTR(CypherText, sessionK, nonce)
 
-    #Cálculo de hash da mensagem recuperada
+    # Cálculo de Hash da mensagem recuperada
     rmHash = hashlib.sha3_256(message).digest()
 
-    #Comparação do Hash recebido com o Hash inicial da mensagem.
+    # Comparação do Hash recebido com o Hash inicial da mensagem.
     if rmHash == mHash:
         print("Arquivo verificado! O cálculo do hash da mensagem recuperada é igual ao hash enviado.")
         return message.decode()
@@ -58,22 +82,38 @@ def DecypherProtocol(HashCypher, CypherText, CypherSession,pk, sk, nonce):
         return None
 
 def FullProtocol(message):
+    """
+        Função que simula a comunicação entre um remetente e um destinatário. É nela em que serão
+        geradas as chaves pública e privada do RSA assim como o nonce (vetor inicial do AES). Essa
+        função realiza a cifração de uma mensagem do remetente e a envia para um destinatário, que
+        por sua vez decifra a mensagem recebida e verifica se ela está correta.
+        Entrada:
+            message -> Mensagem a ser enviada
+    """
+    print("Fazendo a cifração da mensagem...")
     
-    #Geração de Chaves assimétricas pelo padrão RSA.
+    # Geração das chaves assimétricas pelo padrão RSA.
     pk, sk = RSA.RSAKeys()
 
-    #Geração de um nonce para calculos do AES-CTR.
+    # Geração de um nonce para os calculos do AES-CTR.
     nonce = AES.getNonce(16)
 
-    #Resultado da cifração por parte do transmissor.
-    HashCypher, CypherText, CypherSession = CypherProtocol(message, pk, sk, nonce)
+    # Resultado da cifração por parte do transmissor.
+    CypherHash, CypherText, CypherSession = CypherProtocol(message, pk, sk, nonce)
+    
+    print("Mensagem cifrada a ser enviada:")
     print(CypherText)
 
-    #Resultado da decifração por parte do receptor.
-    receptor = DecypherProtocol(HashCypher, CypherText, 
-                                CypherSession, pk, sk, nonce)
+    # Resultado da decifração por parte do receptor.
+    recoverMessage = DecypherProtocol(CypherHash, CypherText, CypherSession, pk, sk, nonce)
 
-    print("Messagem recebida:")
-    print(receptor)
+    print("Messagem decifrada recebida:")
+    print(recoverMessage)
 
-FullProtocol('Os amigos do maestro querem que dificilmente se possa acha obra tão bem acabada. Um ou outro admite certas rudezas e tais ou quais lacunas, mas com o andar da ópera é provável que estas sejam preenchidas ou explicadas, e aquelas desapareçam inteiramente, não se negando o maestro a emendar a obra onde achar que não responde de todo ao pensamento sublime do poeta. Já não dizem o mesmo os amigos deste. Juram que o libreto foi sacrificado, que a partitura corrompeu o sentido da letra, e, posto seja bonita em alguns lugares, e trabalhada com arte em outros, é absolutamente diversa e até contrária ao drama. O grotesco, por exemplo, não está no texto do poeta; é uma excrescência para imitar as Mulheres Patuscas de Windsor. Este ponto é contestado pelos satanistas com alguma aparência de razão. Dizem eles que, ao tempo em que o jovem Satanás compôs a grande ópera, nem essa farsa nem Shakespeare eram nascidos. Chegam a afirmar que o poeta inglês não teve outro gênio senão transcrever a letra da ópera, com tal arte e fidelidade, que parece ele próprio o autor da composição; mas, evidentemente, é um plagiário.')
+print("Informe o nome do arquivo com a mensagem a ser transmitida: ", end="")
+fileName = input()
+
+with open(fileName, "r", encoding='utf-8') as arquivo:
+    message = arquivo.read()
+
+FullProtocol(message)

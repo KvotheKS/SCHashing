@@ -45,7 +45,7 @@ def printHex(matrix):
     """
         Função utilizada para printar uma matrix 4x4 usando valores hexadecimais
         Entrada:
-            matrix -> matriz 4x4 de inteiros
+            Matrix -> matriz 4x4 de inteiros
     """
     for i in range(4):
         for j in range(4):
@@ -57,11 +57,11 @@ def listToMatrix(list, n, mode=0):
     """
         Função que converte uma lista para uma matriz NxN
         Entrada:
-            list -> lista a ser transformada
-            n -> tamanho da matriz
+            list -> Lista a ser transformada
+            n -> Tamanho da matriz
             mode -> Indica se a lista vai ser quebrada em colunas da matriz (0) ou linhas da matriz (1)
         Saída:
-            matriz NxN montada a partir de colunas ou de linhas
+            Matriz NxN montada a partir de colunas ou de linhas
     """
     if mode != 0:
         return [[list[n*i + j] for i in range(n)] for j in range(n)]
@@ -71,11 +71,11 @@ def matrixToList(matrix, n, mode=0):
     """
         Função que converte uma matriz para uma lista de tamnho NxN
         Entrada:
-            matrix -> matriz a ser transformada
-            n -> tamanho da matriz
+            matrix -> Matriz a ser transformada
+            n -> Tamanho da matriz
             mode -> Indica se a matriz é um matriz organizada em colunas (0) ou em linhas (1)
         Saída:
-            lista de tamanho NxN montada a partir da matriz em colunas ou em linhas
+            Lista de tamanho NxN montada a partir da matriz em colunas ou em linhas
     """
     if mode != 0:
         return [matrix[j][i] for i in range(n) for j in range(n)]
@@ -85,8 +85,8 @@ def galoisMul(a, b):
     """
         Função que realiza a multiplicação no Corpo de Galois GF(2^8)
         Entrada:
-            a -> elemento do estado a ser multiplicado
-            b -> elemento da matriz GF_MATRIX que multiplica a (pode ser 1, 2 ou 3)
+            a -> Elemento do estado a ser multiplicado
+            b -> Elemento da matriz GF_MATRIX que multiplica a (pode ser 1, 2 ou 3)
         Saída:
             Resultado da multiplicação de a x b
     """
@@ -106,9 +106,9 @@ def rotWord(column):
     """
         Função que realiza a rotação de uma coluna e realiza a substituição dos valores usando a S_BOX
         Entrada:
-            column -> coluna a ser rotacionada e substituída
+            column -> Coluna a ser rotacionada e substituída
         Saída:
-            rot_word -> nova coluna resultante da operação
+            rot_word -> Nova coluna resultante da operação
     """
     # Pega os elementos a partir do segundo elemento da coluna e faz a substituição
     rot_word = [S_BOX[column[i]] for i in range(1, len(column))]
@@ -120,9 +120,9 @@ def keyExpansion(masterKey):
     """
         Função que computa as chaves de cada uma das N_ROUNDS rodadas
         Entrada:
-            masterKey -> chave principal passada para o AES
+            masterKey -> Chave principal passada para o AES
         Saída:
-            roundKeys -> lista de todas as chaves de rodadas no formato de matriz de colunas
+            roundKeys -> Lista de todas as chaves de rodadas no formato de matriz de colunas
     """
     # Transforma a masterKey em matriz de colunas
     masterKey = listToMatrix(list(masterKey), 4)
@@ -228,10 +228,10 @@ def encryptAES(plaintext, masterKey):
     """
         Função de cifração usando o AES
         Entrada:
-            plaintext -> mensagem a ser cifrada, deve estar em string de bytes
-            masterKey -> chave usada para fazer a cifração, deve estar em string de bytes
+            plaintext -> Mensagem a ser cifrada, deve estar em string de bytes
+            masterKey -> Chave usada para fazer a cifração, deve estar em string de bytes
         Saída:
-            ciphertext -> mensagem cifrada pelo AES
+            ciphertext -> Mensagem cifrada pelo AES
     """
     # Computa as chaves de rodada
     roundKeys = keyExpansion(masterKey)
@@ -266,7 +266,7 @@ def padding(plaintext):
         No caso, os elementos do padding são justamente o tamanho do mesmo
         Se a mensagem já tiver 16 bytes, é adicionado um bloco inteiro de 16 bytes como padding
         Entrada:
-            plaintext -> mensagem que sofrerá o padding
+            plaintext -> Mensagem que sofrerá o padding
         Saída:
             Mensagem de tamanho múltiplo de 16 bytes
     """
@@ -280,7 +280,7 @@ def unpadding(plaintext):
     """
         Função que remove um padding da mensagem usando PKCS#7 padding
         Entrada:
-            plaintext -> mensagem com padding no final dela
+            plaintext -> Mensagem com padding no final dela
         Saída:
             Mensagem sem o padding
     """
@@ -294,7 +294,7 @@ def getNonce(n):
     """
         Função que gera uma string de bytes aleatória de n bytes que deve ser usada uma única vez
         Entrada:
-            n -> número de bytes
+            n -> Número de bytes
         Saída:
             String de n bytes aleatória
     """
@@ -304,7 +304,7 @@ def increaseCounter(counter):
     """
         Função que incrementa o contador do CTR em 1
         Entrada:
-            counter -> contador do CTR
+            counter -> Contador do CTR
         Saída:
             Contador + 1
     """
@@ -319,10 +319,10 @@ def splitIntoBlocks(plaintext, sizeBlock=16):
     """
         Função que quebra uma mensagem em blocos de sizeBlock bytes
         Entrada:
-            plaintext -> mensagem a ser quebrada
-            sizeBlock -> tamanho de cada bloco em bytes
+            plaintext -> Mensagem a ser quebrada
+            sizeBlock -> Tamanho de cada bloco em bytes
         Saída:
-            blocks -> lista com todos os blocos gerados pela quebra
+            blocks -> Lista com todos os blocos gerados pela quebra
     """
     blocks = []
     # A mensagem será dividida em len(plaintext) // sizeBlock blocos
@@ -335,9 +335,9 @@ def unionBlocks(blocks):
     """
         Função que une vários blocos de uma mensagem para uma string de bytes
         Entrada:
-            blocks -> lista com os blocos da mensagem
+            blocks -> Lista com os blocos da mensagem
         Saída:
-            union -> resultado da união desses blocos em uma string de bytes
+            union -> Resultado da união desses blocos em uma string de bytes
     """
     # Pega o primeiro bloco
     union = blocks[0]
@@ -350,8 +350,8 @@ def xorBytes(byteStr1, byteStr2):
     """
         Função que realiza XOR elemento a elemento entre duas string de bytes
         Entrada:
-            byteStr1 -> string de bytes
-            byteStr2 -> string de bytes
+            byteStr1 -> String de bytes
+            byteStr2 -> String de bytes
         Saída:
             Resultado do XOR byte a byte das duas string de bytes
     """
@@ -361,11 +361,11 @@ def encryptCTR(plaintext, key, iv):
     """
         Função que realiza a cifração do AES no modo CTR
         Entrada:
-            plaintext -> mensagem a ser cifrada
-            key -> chave usada para cifrar a mensagem
-            iv -> vetor inicial é um nonce (number once) e será o valor inicial do contador
+            plaintext -> Mensagem a ser cifrada
+            key -> Chave usada para cifrar a mensagem
+            iv -> Vetor inicial é um nonce (number once) e será o valor inicial do contador
         Saída:
-            ciphertext -> mensagem cifrada
+            ciphertext -> Mensagem cifrada
     """
     # Adiciona o padding da mensagem
     plaintext = padding(plaintext)
@@ -390,11 +390,11 @@ def decryptCTR(ciphertext, key, iv):
     """
         Função que realiza a decifração do AES no modo CTR
         Entrada:
-            ciphertext -> mensagem a ser decifrada
-            key -> chave usada para decifrar a mensagem
-            iv -> vetor inicial é um nonce (number once) e será o valor inicial do contador
+            ciphertext -> Mensagem a ser decifrada
+            key -> Chave usada para decifrar a mensagem
+            iv -> Vetor inicial é um nonce (number once) e será o valor inicial do contador
         Saída:
-            plaintext -> mensagem decifrada (mensagem origianl)
+            plaintext -> Mensagem decifrada (mensagem origianl)
     """
     # Quebra a mensagem cifrada em blocos
     ciphertextBlocks = splitIntoBlocks(ciphertext)
