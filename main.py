@@ -5,6 +5,11 @@ import hashlib
 import base64
 
 def appendCypher(sessionK, mHash, CypherHash, CypherText, CypherSession):
+    """
+        bytes, bytes, bytes, bytes, bytes -> _
+    
+        Serve para pegar as principais informações do processo da cifração do programa.
+    """
     hyphen = '------------'
     nl = '\n\n\n'
     lsInfo = [sessionK, mHash, CypherHash, CypherText, CypherSession]
@@ -13,6 +18,11 @@ def appendCypher(sessionK, mHash, CypherHash, CypherText, CypherSession):
         cypherOut.write(hyphen + lsNames[i] + hyphen + nl + str(lsInfo[i]) + nl)
 
 def appendDecypher(sessionK, mHash, rmHash, message):
+    """
+        bytes, bytes, bytes, bytes -> _
+        
+        Serve para pegar as principais informações do processo da decifração do programa.
+    """
     hyphen = '------------'
     nl = '\n\n\n'
     lsInfo = [sessionK, mHash, rmHash, message]
