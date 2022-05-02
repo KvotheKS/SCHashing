@@ -1,3 +1,9 @@
+"""
+    Alunos: 
+        Alexsander Correa de Oliveira - 19/0023562
+        João Víctor Siqueira de Araujo - 19/0031026
+"""
+
 import RSA
 import AES
 import secrets
